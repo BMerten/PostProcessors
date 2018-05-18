@@ -1,4 +1,5 @@
 /**
+
   Postprocessor for MG Corta P 2500 with Plasma-Torch
   Hypertherm Powermaxx45
   
@@ -28,29 +29,23 @@ maximumCircularSweep = toRad(180);
 allowHelicalMoves = false;
 allowedCircularPlanes = undefined; // allow any circular motion
 
-
-
+separateWordsWithSpace = true; // specifies that the words should be separated with a white space
+sequenceNumberStart = 1; // first sequence number
+showSequenceNumbers = true; // show sequence numbers
+sequenceNumberIncrement = 1; // increment for sequence numbers
+writeMachine = true; // write machine
+allowHeadSwitches = false; // output code to allow heads to be manually switched for piercing and cutting
+w_plane = 0; // Werkzeugarbeitsebene
 
 // user-defined properties
 properties = {
-  writeMachine: true, // write machine
-  showSequenceNumbers: true, // show sequence numbers
-  sequenceNumberStart: 1, // first sequence number
-  sequenceNumberIncrement: 1, // increment for sequence numbers
-  allowHeadSwitches: false, // output code to allow heads to be manually switched for piercing and cutting
-  separateWordsWithSpace: true // specifies that the words should be separated with a white space
+  retract: 0, // Rueckzugshoehe Eilgang
 };
 
 // user-defined property definitions
 propertyDefinitions = {
-  writeMachine: {title:"Programmkopf schreiben", description:"Output the machine settings in the header of the code.", group:0, type:"boolean"},
-  showSequenceNumbers: {title:"NC-Befehlssatznummern", description:"Use sequence numbers for each block of outputted code.", group:1, type:"boolean"},
-  sequenceNumberStart: {title:"Erste NC-Befehlssatznummer", description:"The number at which to start the sequence numbers.", group:1, type:"integer"},
-  sequenceNumberIncrement: {title:"NC-Befehlssatznummernabstand", description:"The amount by which the sequence number is incremented by in each block.", group:1, type:"integer"},
-  allowHeadSwitches: {title:"Allow head switches", description:"Enable to output code to allow heads to be manually switched for piercing and cutting.", type:"boolean"},
-  separateWordsWithSpace: {title:"Leerzeiche zwischen Woertern", description:"Adds spaces between words if 'yes' is selected.", type:"boolean"}
+  retract: {title:"Rueckzugshoehe", description:"Rueckzugshoehe Eilgang", type:"integer"}
 };
-
 
 // ************************************************************************************************************************************************************
 // Definition der Ausgabeformate und Ausgabevariablen
@@ -88,11 +83,11 @@ var WARNING_WORK_OFFSET = 0;
 
 function onOpen() {
   
-  if (!properties.separateWordsWithSpace) {
+  if (!separateWordsWithSpace) {
     setWordSeparator("");
   }
 
-  sequenceNumber = properties.sequenceNumberStart;
+  sequenceNumber = sequenceNumberStart;
 
   if (programName) {
     writeComment(programName);
@@ -107,7 +102,7 @@ function onOpen() {
   var model = machineConfiguration.getModel();
   var description = machineConfiguration.getDescription();
 
-  if (properties.writeMachine && (vendor || model || description)) {
+  if (writeMachine && (vendor || model || description)) {
     writeComment(localize("Machine"));
     if (vendor) {
       writeComment("  " + localize("vendor") + ": " + vendor);
@@ -161,7 +156,7 @@ function onClose() {
 // ************************************************************************************************************************************************************
 
 function onSection() {
-//var z = zOutput.format(-50);
+//var z = zOutput.format(-properties.retract);
 
   var insertToolCall = isFirstSection() ||
     currentSection.getForceToolChange && currentSection.getForceToolChange() ||
@@ -218,7 +213,7 @@ function onSection() {
       writeBlock(mFormat.format(36), "T" + toolFormat.format(1)); // plasma
       // to retract hight
       writeComment("Rueckzugshoehe anfahren");
-      writeBlock(gMotionModal.format(0), xOutput.format(0), yOutput.format(0), zOutput.format(-50));
+      writeBlock(gMotionModal.format(0), xOutput.format(0), yOutput.format(0), zOutput.format(-properties.retract));
       break;
     
 //	case TOOL_MARKER:
@@ -424,9 +419,9 @@ var sequenceNumber;
 var currentWorkOffset;
 
 function writeBlock() {
-  if (properties.showSequenceNumbers) {
+  if (showSequenceNumbers) {
     writeWords2("N" + nFormat.format(sequenceNumber), arguments);
-    sequenceNumber += properties.sequenceNumberIncrement;
+    sequenceNumber += sequenceNumberIncrement;
   } else {
     writeWords(arguments);
   }
@@ -476,7 +471,7 @@ function onParameter(name, value) {
   } else if (name == "beginSequence") {
     if (value == "piercing") {
       if (cuttingSequence != "piercing") {
-        if (properties.allowHeadSwitches) {
+        if (allowHeadSwitches) {
           writeln("");
           writeComment("Switch to piercing head before continuing");
           onCommand(COMMAND_STOP);
@@ -485,7 +480,7 @@ function onParameter(name, value) {
       }
     } else if (value == "cutting") {
       if (cuttingSequence == "piercing") {
-        if (properties.allowHeadSwitches) {
+        if (allowHeadSwitches) {
           writeln("");
           writeComment("Switch to cutting head before continuing");
           onCommand(COMMAND_STOP);
@@ -511,7 +506,7 @@ function setDeviceMode(enable) {
       default:
         // to working plane
         writeComment("Arbeitshoehe anfahren");
-        writeBlock(gMotionModal.format(0), zOutput.format(0));
+        writeBlock(gMotionModal.format(0), zOutput.format(w_plane));
         writeComment("Lichtbogen ein");
         writeBlock(mFormat.format(70));
         writeComment("Achsfreigabe");
@@ -528,7 +523,7 @@ function setDeviceMode(enable) {
         writeComment("Lichtbogen aus");
         writeBlock(mFormat.format(-70));
         writeComment("Rueckzugshoehe anfahren");
-        writeBlock(gMotionModal.format(0), zOutput.format(-50));
+        writeBlock(gMotionModal.format(0), zOutput.format(-properties.retract));
         
         writeln("");
       }
