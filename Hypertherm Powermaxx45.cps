@@ -83,54 +83,42 @@ var WARNING_WORK_OFFSET = 0;
 
 function onOpen() {
   
-  if (!separateWordsWithSpace) {
-    setWordSeparator("");
-  }
-
-  sequenceNumber = sequenceNumberStart;
-
-  if (programName) {
-    writeComment(programName);
-  }
-  if (programComment) {
-    writeComment(programComment);
-  }
-
-  // dump machine configuration
+// ** Leerzeichen einfuegen  
   
-  var vendor = machineConfiguration.getVendor();
-  var model = machineConfiguration.getModel();
-  var description = machineConfiguration.getDescription();
-
-  if (writeMachine && (vendor || model || description)) {
-    writeComment(localize("Machine"));
-    if (vendor) {
-      writeComment("  " + localize("vendor") + ": " + vendor);
+    if (!separateWordsWithSpace) {
+        setWordSeparator("");
     }
-    if (model) {
-      writeComment("  " + localize("model") + ": " + model);
-    }
-    if (description) {
-      writeComment("  " + localize("description") + ": "  + description);
-    }
-  }
 
-  // absolute coordinates and feed per min
-  writeBlock(gAbsIncModal.format(90));
+// ** Satznummern bei 1 starten
 
-  switch (unit) {
-  case IN:
-    writeComment("Werte in inch");
-    writeBlock(gUnitModal.format(20));
-    break;
-  case MM:
+    sequenceNumber = sequenceNumberStart;
+
+// ** Programmnamen schreiben
+
+    if (programName) {
+        writeComment(programName);
+        writeln("");
+    }
+  
+// ** Programmkommentar schreiben
+  
+    if (programComment) {
+        writeComment(programComment);
+        writeln("");
+    }
+
+// ** Verfahrwege nach absoluten Koordinaten
+  
+    writeComment("Absolute Koordinaten");
+    writeBlock(gAbsIncModal.format(90));
+
+// ** Masseinheiten im mm
+
     writeComment("Werte in mm");
     writeBlock(gUnitModal.format(21));
-    break;
-  }
-
+  
 }
-
+  
 // ************************************************************************************************************************************************************
 // Programmende
 // ************************************************************************************************************************************************************
@@ -138,17 +126,13 @@ function onOpen() {
 function onClose() {
   writeln("");
   
-  //onCommand(COMMAND_COOLANT_OFF);
-
-  //writeBlock(mFormat.format(19));
-  // writeBlock(gFormat.format(280), gFormat.format(281));
-  
   writeComment("Ursprung anfahren");
   writeBlock(gMotionModal.format(0), xOutput.format(0), yOutput.format(0));
   
   writeln("");
   onImpliedCommand(COMMAND_END);
-  writeBlock(mFormat.format(30)); // stop program
+  writeComment("Programmende");
+  writeBlock(mFormat.format(30));
 }
 
 // ************************************************************************************************************************************************************
@@ -171,73 +155,21 @@ function onSection() {
   writeln("");
 
   if (hasParameter("operation-comment")) {
-    var comment = getParameter("operation-comment");
+   var comment = getParameter("operation-comment");
   if (comment) {
     writeComment(comment);
-    }
+   }
   }
 
-  if (insertToolCall) {
-    retracted = true;
-    onCommand(COMMAND_COOLANT_OFF);
-
-
- if (tool.comment) {
-      writeComment(tool.comment);
-    }
-    switch (currentSection.jetMode) {
-    case JET_MODE_THROUGH:
       writeComment("Plasma-Schneiden");
-      break;
-//    case JET_MODE_ETCHING:
-//      writeComment("Etch cutting");
-//      break;
-//    case JET_MODE_VAPORIZE:
-//      writeComment("Vaporize cutting");
-//      break;
-    default:
-      error(localize("Unsupported cutting mode."));
-    }
-  
-  
-  
-    switch (tool.type) {
- //   case TOOL_WATER_JET:
-//      writeBlock(mFormat.format(36), "T" + toolFormat.format(6)); // waterjet
-//      break;
-//    case TOOL_LASER_CUTTER:
-//      writeBlock(mFormat.format(36), "T" + toolFormat.format(5)); // laser
-//      break;
-    case TOOL_PLASMA_CUTTER:
-      // process 1 - use T2 for process 2
-      writeBlock(mFormat.format(36), "T" + toolFormat.format(1)); // plasma
-      // to retract hight
+      writeBlock(mFormat.format(36), "T" + toolFormat.format(1));
       writeComment("Rueckzugshoehe anfahren");
       writeBlock(gMotionModal.format(0), xOutput.format(0), yOutput.format(0), zOutput.format(-properties.retract));
-      break;
+      
     
-//	case TOOL_MARKER:
-//      writeBlock(mFormat.format(36), "T" + toolFormat.format(3)); // marker 1 - use 4 for marker 2
-//      break;
-    
-	default:
-      error(localize("The CNC does not support the required tool."));
-      return;
-    }    
       writeln("");
-  }
 
   forceXYZ();
-
-  { // pure 3D
-    var remaining = currentSection.workPlane;
-    if (!isSameDirection(remaining.forward, new Vector(0, 0, 1))) {
-      error(localize("Tool orientation is not supported."));
-     return;
-    }
-    setRotation(remaining);
-  }
-
 
   forceAny();
 
@@ -496,15 +428,17 @@ function onParameter(name, value) {
 // Schalten der Werkzeugmaschinen
 // ************************************************************************************************************************************************************
 
+function onPower(power) {
+  setDeviceMode(power);
+}
+
 var deviceOn = false;
 
 function setDeviceMode(enable) {
   if (enable != deviceOn) {
     deviceOn = enable;
     if (enable) {
-      switch (tool.type) {
-      default:
-        // to working plane
+      // to working plane
         writeComment("Arbeitshoehe anfahren");
         writeBlock(gMotionModal.format(0), zOutput.format(w_plane));
         writeComment("Lichtbogen ein");
@@ -514,11 +448,8 @@ function setDeviceMode(enable) {
         
         writeln("");
     
-       }
     } else {
-      switch (tool.type) {
-      default:
-        //to retract plane
+      //to retract plane
         writeln("");
         writeComment("Lichtbogen aus");
         writeBlock(mFormat.format(-70));
@@ -529,72 +460,5 @@ function setDeviceMode(enable) {
       }
     }
   }
-}
 
-// ************************************************************************************************************************************************************
-// 
-// ************************************************************************************************************************************************************
-
-function onPower(power) {
-  setDeviceMode(power);
-}
-
-// ************************************************************************************************************************************************************
-// nicht unterstützte und ??benötigte?? Funktionsaufrufe
-// ************************************************************************************************************************************************************
-
-function onRapid5D(_x, _y, _z, _a, _b, _c) {
-  error(localize("The CNC does not support 5-axis simultaneous toolpath."));
-}
-
-function onLinear5D(_x, _y, _z, _a, _b, _c, feed) {
-  error(localize("The CNC does not support 5-axis simultaneous toolpath."));
-}
-
-function onCycle() {
-  onError("Drilling is not supported by CNC.");
-}
-
-function onDwell(seconds) {
-  if (seconds > 99999.999) {
-    warning(localize("Dwelling time is out of range."));
-  }
-  seconds = clamp(0.001, seconds, 99999.999);
-  writeBlock(gFormat.format(4), "X" + secFormat.format(seconds));
-}
-
-var mapCommand = {
-  COMMAND_STOP:0,
-  COMMAND_OPTIONAL_STOP:1,
-  COMMAND_END:2
-};
-
-function onCommand(command) {
-  switch (command) {
-  case COMMAND_POWER_ON:
-    return;
-  case COMMAND_POWER_OFF:
-    return;
-  case COMMAND_COOLANT_ON:
-    return;
-  case COMMAND_COOLANT_OFF:
-    return;
-  case COMMAND_LOCK_MULTI_AXIS:
-    return;
-  case COMMAND_UNLOCK_MULTI_AXIS:
-    return;
-  case COMMAND_BREAK_CONTROL:
-    return;
-  case COMMAND_TOOL_MEASURE:
-    return;
-  }
-
-  var stringId = getCommandStringId(command);
-  var mcode = mapCommand[stringId];
-  if (mcode != undefined) {
-    writeBlock(mFormat.format(mcode));
-  } else {
-    onUnsupportedCommand(command);
-  }
-}
 
