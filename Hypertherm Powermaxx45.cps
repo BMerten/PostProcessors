@@ -124,7 +124,6 @@ function onOpen() {
 // ************************************************************************************************************************************************************
 
 function onClose() {
-  writeln("");
   
   writeComment("Ursprung anfahren");
   writeBlock(gMotionModal.format(0), xOutput.format(0), yOutput.format(0));
@@ -140,70 +139,35 @@ function onClose() {
 // ************************************************************************************************************************************************************
 
 function onSection() {
-//var z = zOutput.format(-properties.retract);
 
-  var insertToolCall = isFirstSection() ||
-    currentSection.getForceToolChange && currentSection.getForceToolChange() ||
-    (tool.number != getPreviousSection().getTool().number);
-  
-  var retracted = false; // specifies that the tool has been retracted to the safe plane
-  var newWorkOffset = isFirstSection() ||
-    (getPreviousSection().workOffset != currentSection.workOffset); // work offset changes
-  var newWorkPlane = isFirstSection() ||
-    !isSameDirection(getPreviousSection().getGlobalFinalToolAxis(), currentSection.getGlobalInitialToolAxis());
+writeln("");
 
-  writeln("");
+if (hasParameter("operation-comment")) {
+var comment = getParameter("operation-comment");
+if (comment) {
+writeComment(comment);
+}
+}
 
-  if (hasParameter("operation-comment")) {
-   var comment = getParameter("operation-comment");
-  if (comment) {
-    writeComment(comment);
-   }
-  }
-
-      writeComment("Plasma-Schneiden");
-      writeBlock(mFormat.format(36), "T" + toolFormat.format(1));
-      writeComment("Rueckzugshoehe anfahren");
-      writeBlock(gMotionModal.format(0), xOutput.format(0), yOutput.format(0), zOutput.format(-properties.retract));
+writeComment("Plasma-Schneiden");
+writeBlock(mFormat.format(36), "T" + toolFormat.format(1));
+writeComment("Rueckzugshoehe anfahren");
+writeBlock(gMotionModal.format(0), xOutput.format(0), yOutput.format(0), zOutput.format(-properties.retract));
       
     
-      writeln("");
+writeln("");
 
-  forceXYZ();
+forceXYZ();
+forceAny();
 
-  forceAny();
+var initialPosition = getFramePosition(currentSection.getInitialPosition());
 
-  var initialPosition = getFramePosition(currentSection.getInitialPosition());
+writeBlock(gAbsIncModal.format(90),gMotionModal.format(0),xOutput.format(initialPosition.x),yOutput.format(initialPosition.y));
+writeln("");
+}
 
-  if (insertToolCall || retracted) {
-    gMotionModal.reset();
-
-    if (!machineConfiguration.isHeadConfiguration()) {
-      writeBlock(
-        gAbsIncModal.format(90),
-        gMotionModal.format(0), 
-        xOutput.format(initialPosition.x), 
-        yOutput.format(initialPosition.y)
-      );
-      writeln("");
-    } else {
-      writeBlock(
-        gAbsIncModal.format(90),
-        gMotionModal.format(0),
-        xOutput.format(initialPosition.x),
-        yOutput.format(initialPosition.y)
-      );
-      writeln("");
-    }
-  } else {
-    writeBlock(
-      gAbsIncModal.format(90),
-      gMotionModal.format(0),
-      xOutput.format(initialPosition.x),
-      yOutput.format(initialPosition.y)
-    );
-    writeln("");
-  }
+function onPower(power) {
+  setDeviceMode(power);
 }
 
 // ************************************************************************************************************************************************************
@@ -224,10 +188,6 @@ gMotionModal.reset();
   var x = xOutput.format(_x);
   var y = yOutput.format(_y);
   if (x || y) {
-    if (pendingRadiusCompensation >= 0) {
-      error(localize("Radius compensation mode cannot be changed at rapid traversal."));
-      return;
-    }
     writeBlock(gMotionModal.format(0), x, y);
     writeln("");
     feedOutput.reset();
@@ -240,43 +200,14 @@ gMotionModal.reset();
 
 function onLinear(_x, _y, _z, feed) {
     gMotionModal.reset();
+    forceXYZ();
   // at least one axis is required
-  if (pendingRadiusCompensation >= 0) {
-    // ensure that we end at desired position when compensation is turned off
-    xOutput.reset();
-    yOutput.reset();
-  }
   var x = xOutput.format(_x);
   var y = yOutput.format(_y);
   var f = feedOutput.format(feed);
-  if (x || y) {
-    if (pendingRadiusCompensation >= 0) {
-      pendingRadiusCompensation = -1;
-    switch (radiusCompensation) {
-      case RADIUS_COMPENSATION_LEFT:
-        writeBlock(gFormat.format(41));
-        // use dFormat for keft offset - which is currently not supported
-        writeBlock(gMotionModal.format(1), x, y, f);
-        break;
-      case RADIUS_COMPENSATION_RIGHT:
-        writeBlock(gFormat.format(42));
-        // use dFormat for keft offset - which is currently not supported
-        writeBlock(gMotionModal.format(1), x, y, f);
-        break;
-      default:
-        writeBlock(gFormat.format(40));
-        writeBlock(gMotionModal.format(1), x, y, f);
-      }
-    } else {
+    
       writeBlock(gMotionModal.format(1), x, y, f);
-    }
-  } else if (f) {
-    if (getNextRecord().isMotion()) { // try not to output feed without motion
-      feedOutput.reset(); // force feed on next line
-    } else {
-      writeBlock(gMotionModal.format(1), f);
-    }
-  }
+ 
 }
 
 // ************************************************************************************************************************************************************
@@ -287,12 +218,7 @@ function onCircular(clockwise, cx, cy, cz, x, y, z, feed) {
 
   // one of X/Y and I/J are required and likewise
   
-  if (pendingRadiusCompensation >= 0) {
-    error(localize("Radius compensation cannot be activated/deactivated for a circular move."));
-    return;
-  }
-
-  var start = getCurrentPosition();
+    var start = getCurrentPosition();
   if (isFullCircle()) {
     if (isHelical()) {
       linearize(tolerance);
@@ -316,9 +242,8 @@ function onCircular(clockwise, cx, cy, cz, x, y, z, feed) {
   }
 }
 
-
 // ************************************************************************************************************************************************************
-// 
+// Kommentare schreiben
 // ************************************************************************************************************************************************************
 
 function onComment(message) {
@@ -341,7 +266,6 @@ function forceAny() {
   forceXYZ();
   feedOutput.reset();
 }
-
 
 // ************************************************************************************************************************************************************
 // Zeilenausgabe der Steuerungsbefehle
@@ -372,65 +296,8 @@ function writeComment(text) {
 }
 
 // ************************************************************************************************************************************************************
-// Radiuskompensierung
-// ************************************************************************************************************************************************************
-
-
-var pendingRadiusCompensation = -1;
-
-function onRadiusCompensation() {
-  pendingRadiusCompensation = radiusCompensation;
-}
-
-var shapeArea = 0;
-var shapePerimeter = 0;
-var shapeSide = "inner";
-var cuttingSequence = "";
-
-
-// ************************************************************************************************************************************************************
-// 
-// ************************************************************************************************************************************************************
-
-function onParameter(name, value) {
-  if ((name == "action") && (value == "pierce")) {
-  } else if (name == "shapeArea") {
-    shapeArea = value;
-  } else if (name == "shapePerimeter") {
-    shapePerimeter = value;
-  } else if (name == "shapeSide") {
-    shapeSide = value;
-  } else if (name == "beginSequence") {
-    if (value == "piercing") {
-      if (cuttingSequence != "piercing") {
-        if (allowHeadSwitches) {
-          writeln("");
-          writeComment("Switch to piercing head before continuing");
-          onCommand(COMMAND_STOP);
-          writeln("");
-        }
-      }
-    } else if (value == "cutting") {
-      if (cuttingSequence == "piercing") {
-        if (allowHeadSwitches) {
-          writeln("");
-          writeComment("Switch to cutting head before continuing");
-          onCommand(COMMAND_STOP);
-          writeln("");
-        }
-      }
-    }
-    cuttingSequence = value;
-  }
-}
-
-// ************************************************************************************************************************************************************
 // Schalten der Werkzeugmaschinen
 // ************************************************************************************************************************************************************
-
-function onPower(power) {
-  setDeviceMode(power);
-}
 
 var deviceOn = false;
 
