@@ -3,7 +3,7 @@
   Postprocessor for MG Corta P 2500 with Plasma-Torch
   Hypertherm Powermaxx45
   
-  V 0.9 16.02.2018 B. Merten
+  V 1.0 25.05.2018 B. Merten
   
 */
 
@@ -39,18 +39,19 @@ w_plane = 0; // Werkzeugarbeitsebene
 
 // user-defined properties
 properties = {
-  retract: 0, // Rueckzugshoehe Eilgang
+retract: 0, // Rueckzugshoehe Eilgang
+test: false // Testfahrt ohne Achsfreigabe
 };
 
 // user-defined property definitions
 propertyDefinitions = {
-  retract: {title:"Rueckzugshoehe", description:"Rueckzugshoehe Eilgang", type:"integer"}
+retract: {title:"Rueckzugshoehe", description:"Rueckzugshoehe Eilgang", type:"integer"},
+test: {title:"Testfahrt", description:"Testfahrt ohne Achsfreigabe", type:"boolean"}
 };
 
 // ************************************************************************************************************************************************************
 // Definition der Ausgabeformate und Ausgabevariablen
 // ************************************************************************************************************************************************************
-
 
 var gFormat = createFormat({prefix:"G", zeropad:true, width:2, decimals:0});
 var mFormat = createFormat({prefix:"M", decimals:0});
@@ -85,37 +86,39 @@ function onOpen() {
   
 // ** Leerzeichen einfuegen  
   
-    if (!separateWordsWithSpace) {
-        setWordSeparator("");
-    }
+if (!separateWordsWithSpace) {
+setWordSeparator("");
+}
 
 // ** Satznummern bei 1 starten
 
-    sequenceNumber = sequenceNumberStart;
+sequenceNumber = sequenceNumberStart;
 
 // ** Programmnamen schreiben
 
-    if (programName) {
-        writeComment(programName);
-        writeln("");
-    }
+if (programName) {
+writeComment(programName);
+writeln("");
+}
   
 // ** Programmkommentar schreiben
   
-    if (programComment) {
-        writeComment(programComment);
-        writeln("");
-    }
+if (programComment) {
+writeComment(programComment);
+writeln("");
+}
 
 // ** Verfahrwege nach absoluten Koordinaten
   
-    writeComment("Absolute Koordinaten");
-    writeBlock(gAbsIncModal.format(90));
+writeComment("Absolute Koordinaten");
+writeBlock(gAbsIncModal.format(90));
 
 // ** Masseinheiten im mm
 
-    writeComment("Werte in mm");
-    writeBlock(gUnitModal.format(21));
+writeComment("Werte in mm");
+writeBlock(gUnitModal.format(21));
+    
+writeln("");
   
 }
   
@@ -125,13 +128,12 @@ function onOpen() {
 
 function onClose() {
   
-  writeComment("Ursprung anfahren");
-  writeBlock(gMotionModal.format(0), xOutput.format(0), yOutput.format(0));
+writeComment("Ursprung anfahren");
+writeBlock(gMotionModal.format(0), xOutput.format(0), yOutput.format(0));
   
-  writeln("");
-  onImpliedCommand(COMMAND_END);
-  writeComment("Programmende");
-  writeBlock(mFormat.format(30));
+onImpliedCommand(COMMAND_END);
+writeComment("Programmende");
+writeBlock(mFormat.format(30));
 }
 
 // ************************************************************************************************************************************************************
@@ -140,8 +142,6 @@ function onClose() {
 
 function onSection() {
 
-writeln("");
-
 if (hasParameter("operation-comment")) {
 var comment = getParameter("operation-comment");
 if (comment) {
@@ -149,16 +149,18 @@ writeComment(comment);
 }
 }
 
+writeln("");
+
 writeComment("Plasma-Schneiden");
 writeBlock(mFormat.format(36), "T" + toolFormat.format(1));
 writeComment("Rueckzugshoehe anfahren");
 writeBlock(gMotionModal.format(0), xOutput.format(0), yOutput.format(0), zOutput.format(-properties.retract));
       
-    
 writeln("");
 
 forceXYZ();
 forceAny();
+gMotionModal.reset();
 
 var initialPosition = getFramePosition(currentSection.getInitialPosition());
 
@@ -166,8 +168,8 @@ writeBlock(gAbsIncModal.format(90),gMotionModal.format(0),xOutput.format(initial
 writeln("");
 }
 
-function onPower(power) {
-  setDeviceMode(power);
+function onPower(enable) {
+setDeviceMode(enable);
 }
 
 // ************************************************************************************************************************************************************
@@ -175,8 +177,8 @@ function onPower(power) {
 // ************************************************************************************************************************************************************
 
 function onSectionEnd() {
-  setDeviceMode(false);
-  forceAny();
+setDeviceMode(false);
+forceAny();
 }
 
 // ************************************************************************************************************************************************************
@@ -185,13 +187,13 @@ function onSectionEnd() {
 
 function onRapid(_x, _y, _z) {
 gMotionModal.reset();
-  var x = xOutput.format(_x);
-  var y = yOutput.format(_y);
-  if (x || y) {
-    writeBlock(gMotionModal.format(0), x, y);
-    writeln("");
-    feedOutput.reset();
-  }
+var x = xOutput.format(_x);
+var y = yOutput.format(_y);
+if (x || y) {
+writeBlock(gMotionModal.format(0), x, y);
+writeln("");
+feedOutput.reset();
+}
 }
 
 // ************************************************************************************************************************************************************
@@ -199,14 +201,14 @@ gMotionModal.reset();
 // ************************************************************************************************************************************************************
 
 function onLinear(_x, _y, _z, feed) {
-    gMotionModal.reset();
-    forceXYZ();
-  // at least one axis is required
-  var x = xOutput.format(_x);
-  var y = yOutput.format(_y);
-  var f = feedOutput.format(feed);
+gMotionModal.reset();
+forceXYZ();
+// at least one axis is required
+var x = xOutput.format(_x);
+var y = yOutput.format(_y);
+var f = feedOutput.format(feed);
     
-      writeBlock(gMotionModal.format(1), x, y, f);
+writeBlock(gMotionModal.format(1), x, y, f);
  
 }
 
@@ -216,30 +218,30 @@ function onLinear(_x, _y, _z, feed) {
 
 function onCircular(clockwise, cx, cy, cz, x, y, z, feed) {
 
-  // one of X/Y and I/J are required and likewise
+// one of X/Y and I/J are required and likewise
   
-    var start = getCurrentPosition();
-  if (isFullCircle()) {
-    if (isHelical()) {
-      linearize(tolerance);
-      return;
-    }
-    switch (getCircularPlane()) {
-    case PLANE_XY:
-      writeBlock(gMotionModal.format(clockwise ? 2 : 3), xOutput.format(x), iOutput.format(cx - start.x, 0), jOutput.format(cy - start.y, 0), feedOutput.format(feed));
-      break;
-    default:
-      linearize(tolerance);
-    }
-  } else {
-    switch (getCircularPlane()) {
-    case PLANE_XY:
-      writeBlock(gMotionModal.format(clockwise ? 2 : 3), xOutput.format(x), yOutput.format(y), iOutput.format(cx - start.x, 0), jOutput.format(cy - start.y, 0), feedOutput.format(feed));
-      break;
-    default:
-      linearize(tolerance);
-    }
-  }
+var start = getCurrentPosition();
+if (isFullCircle()) {
+if (isHelical()) {
+linearize(tolerance);
+return;
+}
+switch (getCircularPlane()) {
+case PLANE_XY:
+writeBlock(gMotionModal.format(clockwise ? 2 : 3), xOutput.format(x), iOutput.format(cx - start.x, 0), jOutput.format(cy - start.y, 0), feedOutput.format(feed));
+break;
+default:
+linearize(tolerance);
+}
+} else {
+switch (getCircularPlane()) {
+case PLANE_XY:
+writeBlock(gMotionModal.format(clockwise ? 2 : 3), xOutput.format(x), yOutput.format(y), iOutput.format(cx - start.x, 0), jOutput.format(cy - start.y, 0), feedOutput.format(feed));
+break;
+default:
+linearize(tolerance);
+}
+}
 }
 
 // ************************************************************************************************************************************************************
@@ -247,24 +249,24 @@ function onCircular(clockwise, cx, cy, cz, x, y, z, feed) {
 // ************************************************************************************************************************************************************
 
 function onComment(message) {
-  writeComment(message);
+writeComment(message);
 }
 
 // ************************************************************************************************************************************************************
 // Erzwingung der Ausgabe von Wiederholungsbefehlen
 // ************************************************************************************************************************************************************
 
-/** Force output of X, Y, and Z. */
+// Force output of X, Y, and Z.
 function forceXYZ() {
-  xOutput.reset();
-  yOutput.reset();
-  zOutput.reset();
+xOutput.reset();
+yOutput.reset();
+zOutput.reset();
 }
 
-/** Force output of X, Y, Z, A, B, C, and F on next output. */
+// Force output of X, Y, Z, A, B, C, and F on next output.
 function forceAny() {
-  forceXYZ();
-  feedOutput.reset();
+forceXYZ();
+feedOutput.reset();
 }
 
 // ************************************************************************************************************************************************************
@@ -275,12 +277,12 @@ var sequenceNumber;
 var currentWorkOffset;
 
 function writeBlock() {
-  if (showSequenceNumbers) {
-    writeWords2("N" + nFormat.format(sequenceNumber), arguments);
-    sequenceNumber += sequenceNumberIncrement;
-  } else {
-    writeWords(arguments);
-  }
+if (showSequenceNumbers) {
+writeWords2("N" + nFormat.format(sequenceNumber), arguments);
+sequenceNumber += sequenceNumberIncrement;
+} else {
+writeWords(arguments);
+}
 }
 
 // ************************************************************************************************************************************************************
@@ -288,11 +290,11 @@ function writeBlock() {
 // ************************************************************************************************************************************************************
 
 function formatComment(text) {
-  return "(" + String(text).replace(/[\(\)]/g, "") + ")";
+return "(" + String(text).replace(/[\(\)]/g, "") + ")";
 }
 
 function writeComment(text) {
-  writeln(formatComment(text));
+writeln(formatComment(text));
 }
 
 // ************************************************************************************************************************************************************
@@ -302,30 +304,52 @@ function writeComment(text) {
 var deviceOn = false;
 
 function setDeviceMode(enable) {
-  if (enable != deviceOn) {
-    deviceOn = enable;
-    if (enable) {
-      // to working plane
-        writeComment("Arbeitshoehe anfahren");
-        writeBlock(gMotionModal.format(0), zOutput.format(w_plane));
-        writeComment("Lichtbogen ein");
-        writeBlock(mFormat.format(70));
-        writeComment("Achsfreigabe");
-        writeBlock(mFormat.format(16), fFormat.format(163)); // wait
-        
-        writeln("");
+
+if (test) {
+
+if (enable != deviceOn) {
+deviceOn = enable;
+if (enable) {
+// to working plane
+writeComment("Arbeitshoehe anfahren");
+writeBlock(gMotionModal.format(0), zOutput.format(w_plane));
+writeln("");
     
-    } else {
-      //to retract plane
-        writeln("");
-        writeComment("Lichtbogen aus");
-        writeBlock(mFormat.format(-70));
-        writeComment("Rueckzugshoehe anfahren");
-        writeBlock(gMotionModal.format(0), zOutput.format(-properties.retract));
+} else {
+//to retract plane
+writeln("");
+writeComment("Rueckzugshoehe anfahren");
+writeBlock(gMotionModal.format(0), zOutput.format(-properties.retract));
         
-        writeln("");
-      }
-    }
-  }
+writeln("");
+}
+}
 
+} else {
 
+if (enable != deviceOn) {
+deviceOn = enable;
+if (enable) {
+// to working plane
+writeComment("Arbeitshoehe anfahren");
+writeBlock(gMotionModal.format(0), zOutput.format(w_plane));
+writeComment("Lichtbogen ein");
+writeBlock(mFormat.format(70));
+writeComment("Achsfreigabe");
+writeBlock(mFormat.format(16), fFormat.format(163)); // wait
+    
+writeln("");
+    
+} else {
+//to retract plane
+writeln("");
+writeComment("Lichtbogen aus");
+writeBlock(mFormat.format(-70));
+writeComment("Rueckzugshoehe anfahren");
+writeBlock(gMotionModal.format(0), zOutput.format(-properties.retract));
+    
+writeln("");
+}
+}
+}  
+}
