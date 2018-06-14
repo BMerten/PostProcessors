@@ -327,8 +327,8 @@ function setDeviceMode(enable) {
 if (enable != deviceOn) {
 deviceOn = enable;
 if (enable) {
-switch (tool.type) {
-default:
+//switch (tool.type) {
+//default:
 // to working plane
 writeComment("Arbeitshoehe anfahren");
 writeBlock(gMotionModal.format(0), zOutput.format(0));
@@ -341,7 +341,7 @@ writeBlock(gFormat.format(04), fFormat.format(piercing_time));
 
 writeln("");
     
-}
+//}
 } else {
 //to retract plane
 writeln("");

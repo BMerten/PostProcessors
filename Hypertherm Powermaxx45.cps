@@ -304,52 +304,67 @@ writeln(formatComment(text));
 var deviceOn = false;
 
 function setDeviceMode(enable) {
+ 
+ if (test) {
+ 
+ writeComment("true");
+ } else {
+ 
+ writeComment("false");
 
-if (test) {
+}
 
-if (enable != deviceOn) {
-deviceOn = enable;
-if (enable) {
-// to working plane
-writeComment("Arbeitshoehe anfahren");
-writeBlock(gMotionModal.format(0), zOutput.format(w_plane));
-writeln("");
+
+}
+
+//if (test) {
+
+  //  if (enable != deviceOn) {
+  //  deviceOn = enable;
     
-} else {
-//to retract plane
-writeln("");
-writeComment("Rueckzugshoehe anfahren");
-writeBlock(gMotionModal.format(0), zOutput.format(-properties.retract));
+    //    if (enable) {
+        // to working plane
+     //   writeComment("Arbeitshoehe anfahren");
+     //   writeBlock(gMotionModal.format(0), zOutput.format(w_plane));
+     //   writeln("");
+    
+      //  } else {
+        //to retract plane
+     //   writeln("");
+   //     writeComment("Rueckzugshoehe anfahren");
+   //     writeBlock(gMotionModal.format(0), zOutput.format(-properties.retract));
         
-writeln("");
-}
-}
+  //      writeln("");
+   //     }
+  //  }
 
-} else {
+    //} else {
 
-if (enable != deviceOn) {
-deviceOn = enable;
-if (enable) {
-// to working plane
-writeComment("Arbeitshoehe anfahren");
-writeBlock(gMotionModal.format(0), zOutput.format(w_plane));
-writeComment("Lichtbogen ein");
-writeBlock(mFormat.format(70));
-writeComment("Achsfreigabe");
-writeBlock(mFormat.format(16), fFormat.format(163)); // wait
+//    if (enable != deviceOn) {
+//    deviceOn = enable;
+        
+//        if (enable) {
+            // to working plane
+ //           writeComment("Arbeitshoehe anfahren");
+   //         writeBlock(gMotionModal.format(0), zOutput.format(w_plane));
+  //          writeComment("Lichtbogen ein");
+//            writeBlock(mFormat.format(70));
+//            writeComment("Achsfreigabe");
+  //          writeBlock(mFormat.format(16), fFormat.format(163)); // wait
     
-writeln("");
+    //        writeln("");
     
-} else {
-//to retract plane
-writeln("");
-writeComment("Lichtbogen aus");
-writeBlock(mFormat.format(-70));
-writeComment("Rueckzugshoehe anfahren");
-writeBlock(gMotionModal.format(0), zOutput.format(-properties.retract));
+      //      } else {
+//            //to retract plane
+//            writeln("");
+//            writeComment("Lichtbogen aus");
+//            writeBlock(mFormat.format(-70));
+//            writeComment("Rueckzugshoehe anfahren");
+//            writeBlock(gMotionModal.format(0), zOutput.format(-properties.retract));
     
-writeln("");
-}
-}
-}  
-}
+//            writeln("");
+  //          }
+    //    }
+ //   }  
+
+
