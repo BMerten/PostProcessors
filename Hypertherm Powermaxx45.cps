@@ -39,14 +39,14 @@ w_plane = 0; // Werkzeugarbeitsebene
 
 // user-defined properties
 properties = {
-retract: 0, // Rueckzugshoehe Eilgang
-test: false // Testfahrt ohne Achsfreigabe
+retract: 0 // Rueckzugshoehe Eilgang
+//test: false // Testfahrt ohne Achsfreigabe
 };
 
 // user-defined property definitions
 propertyDefinitions = {
-retract: {title:"Rueckzugshoehe", description:"Rueckzugshoehe Eilgang", type:"integer"},
-test: {title:"Testfahrt", description:"Testfahrt ohne Achsfreigabe", type:"boolean"}
+retract: {title:"Rueckzugshoehe", description:"Rueckzugshoehe Eilgang", type:"integer"}
+//test: {title:"Testfahrt", description:"Testfahrt ohne Achsfreigabe", type:"boolean"}
 };
 
 // ************************************************************************************************************************************************************
@@ -77,6 +77,7 @@ var gAbsIncModal = createModal({}, gFormat); // modal group 3 // G90-91
 var gUnitModal = createModal({}, gFormat); // modal group 6 // G20-21
 
 var WARNING_WORK_OFFSET = 0;
+var deviceOn = false;
 
 // ************************************************************************************************************************************************************
 // Initialisierung der allgemeinen Parameter // Programmbeginn
@@ -168,16 +169,13 @@ writeBlock(gAbsIncModal.format(90),gMotionModal.format(0),xOutput.format(initial
 writeln("");
 }
 
-function onPower(enable) {
-setDeviceMode(enable);
-}
 
 // ************************************************************************************************************************************************************
 // Ende eines Abschnitts
 // ************************************************************************************************************************************************************
 
 function onSectionEnd() {
-setDeviceMode(false);
+//setDeviceMode(false);
 forceAny();
 }
 
@@ -301,70 +299,58 @@ writeln(formatComment(text));
 // Schalten der Werkzeugmaschinen
 // ************************************************************************************************************************************************************
 
-var deviceOn = false;
+function onPower(power) {
+setDeviceMode(power);
+}
 
 function setDeviceMode(enable) {
- 
- if (test) {
- 
- writeComment("true");
- } else {
- 
- writeComment("false");
 
-}
-
-
-}
-
-//if (test) {
-
-  //  if (enable != deviceOn) {
-  //  deviceOn = enable;
-    
-    //    if (enable) {
-        // to working plane
-     //   writeComment("Arbeitshoehe anfahren");
-     //   writeBlock(gMotionModal.format(0), zOutput.format(w_plane));
-     //   writeln("");
-    
-      //  } else {
-        //to retract plane
-     //   writeln("");
-   //     writeComment("Rueckzugshoehe anfahren");
-   //     writeBlock(gMotionModal.format(0), zOutput.format(-properties.retract));
-        
-  //      writeln("");
-   //     }
-  //  }
-
-    //} else {
-
-//    if (enable != deviceOn) {
-//    deviceOn = enable;
-        
-//        if (enable) {
-            // to working plane
- //           writeComment("Arbeitshoehe anfahren");
-   //         writeBlock(gMotionModal.format(0), zOutput.format(w_plane));
-  //          writeComment("Lichtbogen ein");
-//            writeBlock(mFormat.format(70));
-//            writeComment("Achsfreigabe");
-  //          writeBlock(mFormat.format(16), fFormat.format(163)); // wait
-    
-    //        writeln("");
-    
-      //      } else {
-//            //to retract plane
+//     if (test) {
+// 
+//        if (enable != deviceOn) {
+//        deviceOn = enable;
+//    
+//            if (enable) {
+//            // to working plane
+//            writeComment("Arbeitshoehe anfahren");
+//            writeBlock(gMotionModal.format(0), zOutput.format(w_plane));
 //            writeln("");
-//            writeComment("Lichtbogen aus");
-//            writeBlock(mFormat.format(-70));
+//    
+//            } else {
+//            // to retract plane
+//            writeln("");
 //            writeComment("Rueckzugshoehe anfahren");
 //            writeBlock(gMotionModal.format(0), zOutput.format(-properties.retract));
-    
 //            writeln("");
-  //          }
-    //    }
- //   }  
-
-
+//            }
+//        }
+//        
+//    } else {
+    
+        if (enable != deviceOn) {
+        deviceOn = enable;
+        
+        
+            if (enable) {
+            // to working plane
+            writeComment("Arbeitshoehe anfahren");
+            writeBlock(gMotionModal.format(0), zOutput.format(w_plane));
+            writeComment("Lichtbogen ein");
+            writeBlock(mFormat.format(70));
+            writeComment("Achsfreigabe");
+            writeBlock(mFormat.format(16), fFormat.format(163)); // wait
+            writeln("");
+            
+            } else {
+            //to retract plane
+            writeln("");
+            writeComment("Lichtbogen aus");
+            writeBlock(mFormat.format(-70));
+            writeComment("Rueckzugshoehe anfahren");
+            writeBlock(gMotionModal.format(0), zOutput.format(-properties.retract));
+            writeln("");
+            
+            }
+        }
+//    }
+}
