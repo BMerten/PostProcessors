@@ -4,6 +4,8 @@
   
   V 1.0 25.05.2018 B. Merten
   
+  
+  
 */
 
 description = "Corta P 2500";
@@ -35,6 +37,26 @@ sequenceNumberIncrement = 1; // increment for sequence numbers
 writeMachine = true; // write machine
 allowHeadSwitches = false; // output code to allow heads to be manually switched for piercing and cutting
 w_plane = 0; // Werkzeugarbeitsebene
+
+// user-defined properties
+properties = {
+a_presets: true, // Voreinstellungen gem. Hersteller
+aa_piercing: false, // Lochstechen vor Einschub
+aaa_heating_time: 4000, // Vorheizzeit
+aaaa_piercing_time: 1000, // Lochstechzeit
+aaaaa_speed: 500 // Vorschub
+
+};
+
+// user-defined property definitions
+propertyDefinitions = {
+a_presets: {title:"Voreinstellungen", description:"Voreinstellungen gem. Messer-Griesheim Tabelle", type:"boolean"},
+aa_piercing: {title:"Lochstechen", description:"Lochstechfunktion aktivieren", type:"boolean"},
+aaa_heating_time: {title:"Vorheizzeit (im ms)", description:"Vorheizzeit des Werkstoffes in ms", type:"integer"},
+aaaa_piercing_time: {title:"Lochstechzeit (in ms)", description:"Lochstechzeit für Durchdringung des Grundwerkstoffes", type:"integer"},
+aaaaa_speed: {title:"Vorschub (in mm/min)", description:"Vorschub in mm/min", type:"integer"}
+
+};
 
 // ************************************************************************************************************************************************************
 // Definition der Ausgabeformate und Variablen
@@ -221,6 +243,10 @@ feedOutput.reset();
 // ************************************************************************************************************************************************************
 
 function onLinear(_x, _y, _z, feed) {
+
+
+
+
 gMotionModal.reset();
 forceXYZ();
 // at least one axis is required

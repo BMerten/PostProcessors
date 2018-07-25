@@ -39,15 +39,18 @@ w_plane = 0; // Werkzeugarbeitsebene
 
 // user-defined properties
 properties = {
-retract: 0 // Rueckzugshoehe Eilgang
-//test: false // Testfahrt ohne Achsfreigabe
+retract: 0, // Rückzugshöhe für Eilgang
+test: false // Testfahrt ohne Achsfreigabe
 };
 
 // user-defined property definitions
 propertyDefinitions = {
-retract: {title:"Rueckzugshoehe", description:"Rueckzugshoehe Eilgang", type:"integer"}
-//test: {title:"Testfahrt", description:"Testfahrt ohne Achsfreigabe", type:"boolean"}
+retract: {title:"Rueckzugshoehe", description:"Rueckzugshoehe Eilgang", type:"integer"},
+test: {title:"Testfahrt", description:"Testfahrt ohne Achsfreigabe", type:"boolean"}
 };
+
+
+var retract = 30;
 
 // ************************************************************************************************************************************************************
 // Definition der Ausgabeformate und Ausgabevariablen
@@ -305,28 +308,6 @@ setDeviceMode(power);
 
 function setDeviceMode(enable) {
 
-//     if (test) {
-// 
-//        if (enable != deviceOn) {
-//        deviceOn = enable;
-//    
-//            if (enable) {
-//            // to working plane
-//            writeComment("Arbeitshoehe anfahren");
-//            writeBlock(gMotionModal.format(0), zOutput.format(w_plane));
-//            writeln("");
-//    
-//            } else {
-//            // to retract plane
-//            writeln("");
-//            writeComment("Rueckzugshoehe anfahren");
-//            writeBlock(gMotionModal.format(0), zOutput.format(-properties.retract));
-//            writeln("");
-//            }
-//        }
-//        
-//    } else {
-    
         if (enable != deviceOn) {
         deviceOn = enable;
         
@@ -335,22 +316,25 @@ function setDeviceMode(enable) {
             // to working plane
             writeComment("Arbeitshoehe anfahren");
             writeBlock(gMotionModal.format(0), zOutput.format(w_plane));
-            writeComment("Lichtbogen ein");
-            writeBlock(mFormat.format(70));
-            writeComment("Achsfreigabe");
-            writeBlock(mFormat.format(16), fFormat.format(163)); // wait
+                if (!properties.test) {
+                    writeComment("Lichtbogen ein");
+                    writeBlock(mFormat.format(70));
+                    writeComment("Achsfreigabe");
+                    writeBlock(mFormat.format(16), fFormat.format(163)); // wait
+                    }
             writeln("");
             
             } else {
             //to retract plane
             writeln("");
-            writeComment("Lichtbogen aus");
-            writeBlock(mFormat.format(-70));
+                    if (!properties.test) {
+                    writeComment("Lichtbogen aus");
+                    writeBlock(mFormat.format(-70));
+                    }
             writeComment("Rueckzugshoehe anfahren");
             writeBlock(gMotionModal.format(0), zOutput.format(-properties.retract));
             writeln("");
             
             }
         }
-//    }
-}
+    }
